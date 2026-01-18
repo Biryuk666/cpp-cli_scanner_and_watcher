@@ -1,0 +1,57 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 4,
+        "minor": 1,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "Debug",
+            "displayName": "Debug",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/Debug",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Debug",
+                "CMAKE_C_COMPILER": "C:/Programs/Tools/LLVM/bin/clang-cl.exe",
+                "CMAKE_CXX_COMPILER": "C:/Programs/Tools/LLVM/bin/clang-cl.exe",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/Debug/generators/conan_toolchain.cmake",
+                "CMAKE_MAKE_PROGRAM": "C:/Programs/Tools/Ninja/ninja.exe",
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        },
+        {
+            "name": "Release",
+            "displayName": "Release",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build/Release",
+            "cacheVariables": {
+                "CMAKE_BUILD_TYPE": "Release",
+                "CMAKE_C_COMPILER": "C:/Programs/Tools/LLVM/bin/clang-cl.exe",
+                "CMAKE_CXX_COMPILER": "C:/Programs/Tools/LLVM/bin/clang-cl.exe",
+                "CMAKE_TOOLCHAIN_FILE": "${sourceDir}/build/Release/generators/conan_toolchain.cmake",
+                "CMAKE_MAKE_PROGRAM": "C:/Programs/Tools/Ninja/ninja.exe",
+                "CMAKE_CXX_STANDARD": "23"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "Debug",
+            "configurePreset": "Debug"
+        },
+        {
+            "name": "Release",
+            "configurePreset": "Release"
+        }
+    ],
+    "testPresets": [
+        {
+            "name": "Debug",
+            "configurePreset": "Debug",
+            "output": {
+                "outputOnFailure": true
+            }
+        }
+    ]
+}
