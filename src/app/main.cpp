@@ -3,8 +3,12 @@
 #include <CLI/CLI.hpp>
 #include <filesystem>
 #include <iostream>
+#include <nlohmann/json.hpp>
 
 #include "scanner.h"
+
+constexpr const char* RED = "\033[31m";
+constexpr const char* RESET = "\033[0m";
 
 int main(int argc, char** argv)
 {
@@ -13,11 +17,14 @@ int main(int argc, char** argv)
     std::string command;
     app.require_subcommand(1);
 
-    core::ScanOptions option;
+    core::ScanOptions option{};
     std::filesystem::path path;
+    nlohmann::json output;
+    bool json = false;
 
     auto* scan = app.add_subcommand("scan", "Scan directory recursively");
     scan->add_option("path", path, "Path to scan")->required();
+    scan->add_flag("--json", json);
     scan->add_flag("--include-hidden", option.include_hidden,
                    "Include hidden files");
     scan->add_option("--min-size", option.min_size_bytes,
@@ -30,28 +37,80 @@ int main(int argc, char** argv)
     {
         auto result = core::scan_directory(path, option);
 
-        std::cout << "files: " << result.file_count << "\n";
-        std::cout << "directories: " << result.directory_count << "\n";
-        std::cout << "bytes: " << result.total_bytes << "\n";
-        std::cout << "extensions:\n";
-        for (const auto& [extension, stats] : result.by_extension)
+        if (json)
         {
-            std::cout << "  [" << (extension.empty() ? "<none>" : extension)
-                      << "] "
-                      << "count=" << stats.count << " bytes=" << stats.bytes
-                      << "\n";
+            output["files"] = result.file_count;
+            output["directories"] = result.directory_count;
+            output["bytes"] = result.total_bytes;
+            output["path"] = path.string();
+
+            for (const auto& [extention, stats] : result.by_extension)
+            {
+                // clang-format off
+                output["by_extension"][extention] =  {
+                    {"count", stats.count},
+                    {"bytes", stats.bytes}
+                };
+                // clang-format off
+            }
+
+            std::cout << output.dump(2) << std::endl;
         }
+        else
+        {
+            std::cout << "files: " << result.file_count << "\n";
+            std::cout << "directories: " << result.directory_count << "\n";
+            std::cout << "bytes: " << result.total_bytes << "\n";
+            std::cout << "extensions:\n";
+            for (const auto& [extension, stats] : result.by_extension)
+            {
+                std::cout << "  [" << (extension.empty() ? "<none>" : extension) << "] "
+                          << "count=" << stats.count << " bytes=" << stats.bytes << "\n";
+            }
+        }
+
         return 0;
     }
     catch (const std::filesystem::filesystem_error& error)
     {
-        spdlog::error("filesystem error: {} (path1={}, path2={})", error.what(),
-                      error.path1().string(), error.path2().string());
+        if (json)
+        {
+            
+            // clang-format off
+            output = {
+                {"type", "filesystem error"},
+                {"message", error.what()},
+                {"paths", {
+                    {"path1", error.path1().string()},
+                    {"path2", error.path2().string()}
+                }}
+            };
+            // clang-format off
+
+            std::cerr << "[" << RED << "error" << RESET << "]" << std::endl;
+            std::cerr << output.dump(2) << std::endl;
+        }
+        else
+        {
+            spdlog::error("filesystem error: {} (path1={}, path2={})",
+                          error.what(),
+                          error.path1().string(),
+                          error.path2().string());
+        }
         return 2;
     }
     catch (const std::exception& exception)
     {
-        spdlog::error("error: {}", exception.what());
+        if (json)
+        {
+            output["error"] = exception.what();
+            std::cerr << output.dump(2);
+        }
+        else
+        {
+            spdlog::error("error: {}", exception.what());
+        }
+
         return 1;
     }
 }
