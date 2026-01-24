@@ -6,9 +6,15 @@
 #include <nlohmann/json.hpp>
 
 #include "scanner.h"
+static std::ostream& print_error_word(std::ostream& output)
+{
+    constexpr const char* RED = "\033[31m";
+    constexpr const char* RESET = "\033[0m";
 
-constexpr const char* RED = "\033[31m";
-constexpr const char* RESET = "\033[0m";
+    output << "[" << RED << "error" << RESET << "]" << std::endl;
+
+    return output;
+}
 
 int main(int argc, char** argv)
 {
@@ -87,7 +93,7 @@ int main(int argc, char** argv)
             };
             // clang-format off
 
-            std::cerr << "[" << RED << "error" << RESET << "]" << std::endl;
+            print_error_word(std::cerr);
             std::cerr << output.dump(2) << std::endl;
         }
         else
@@ -104,6 +110,8 @@ int main(int argc, char** argv)
         if (json)
         {
             output["error"] = exception.what();
+
+            print_error_word(std::cerr);
             std::cerr << output.dump(2);
         }
         else
