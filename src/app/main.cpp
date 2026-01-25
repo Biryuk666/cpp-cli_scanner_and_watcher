@@ -5,9 +5,10 @@
 #include <iostream>
 #include <nlohmann/json.hpp>
 
+#include "errors.h"
 #include "scanner.h"
-static std::ostream& print_error_word(std::ostream& output)
-{
+
+static std::ostream& print_error_word(std::ostream& output) {
     constexpr const char* RED = "\033[31m";
     constexpr const char* RESET = "\033[0m";
 
@@ -16,8 +17,7 @@ static std::ostream& print_error_word(std::ostream& output)
     return output;
 }
 
-int main(int argc, char** argv)
-{
+int main(int argc, char** argv) {
     CLI::App app{"CLI scanner"};
 
     std::string command;
@@ -38,87 +38,55 @@ int main(int argc, char** argv)
         ->default_val(0);
 
     CLI11_PARSE(app, argc, argv);
+    auto result = core::scan_directory(path, option);
+    if (result.has_value()) {
+        auto& value = result.value();
 
-    try
-    {
-        auto result = core::scan_directory(path, option);
-
-        if (json)
-        {
-            output["files"] = result.file_count;
-            output["directories"] = result.directory_count;
-            output["bytes"] = result.total_bytes;
+        if (json) {
+            output["files"] = value.file_count;
+            output["directories"] = value.directory_count;
+            output["bytes"] = value.total_bytes;
             output["path"] = path.string();
 
-            for (const auto& [extention, stats] : result.by_extension)
-            {
+            for (const auto& [extention, stats] : value.by_extension) {
                 // clang-format off
-                output["by_extension"][extention] =  {
+                output["by_extension"][extention] = {
                     {"count", stats.count},
                     {"bytes", stats.bytes}
                 };
-                // clang-format off
+                // clang-format on
             }
 
             std::cout << output.dump(2) << std::endl;
-        }
-        else
-        {
-            std::cout << "files: " << result.file_count << "\n";
-            std::cout << "directories: " << result.directory_count << "\n";
-            std::cout << "bytes: " << result.total_bytes << "\n";
+        } else {
+            std::cout << "files: " << value.file_count << "\n";
+            std::cout << "directories: " << value.directory_count << "\n";
+            std::cout << "bytes: " << value.total_bytes << "\n";
             std::cout << "extensions:\n";
-            for (const auto& [extension, stats] : result.by_extension)
-            {
-                std::cout << "  [" << (extension.empty() ? "<none>" : extension) << "] "
-                          << "count=" << stats.count << " bytes=" << stats.bytes << "\n";
+            for (const auto& [extension, stats] : value.by_extension) {
+                std::cout << "  [" << (extension.empty() ? "<none>" : extension)
+                          << "] "
+                          << "count=" << stats.count << " bytes=" << stats.bytes
+                          << "\n";
             }
         }
 
         return 0;
-    }
-    catch (const std::filesystem::filesystem_error& error)
-    {
-        if (json)
-        {
-            
-            // clang-format off
-            output = {
-                {"type", "filesystem error"},
-                {"message", error.what()},
-                {"paths", {
-                    {"path1", error.path1().string()},
-                    {"path2", error.path2().string()}
-                }}
-            };
-            // clang-format off
+    } else {
+        auto& error = result.error();
+
+        if (json) {
+            output = error.to_json();
 
             print_error_word(std::cerr);
             std::cerr << output.dump(2) << std::endl;
-        }
-        else
-        {
-            spdlog::error("filesystem error: {} (path1={}, path2={})",
-                          error.what(),
-                          error.path1().string(),
-                          error.path2().string());
-        }
-        return 2;
-    }
-    catch (const std::exception& exception)
-    {
-        if (json)
-        {
-            output["error"] = exception.what();
+        } else {
+            spdlog::error(error.to_string());
 
             print_error_word(std::cerr);
             std::cerr << output.dump(2);
         }
-        else
-        {
-            spdlog::error("error: {}", exception.what());
-        }
 
-        return 1;
+        return static_cast<int>(error.code);
     }
 }

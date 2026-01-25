@@ -4,12 +4,12 @@
 #include <fstream>
 #include <string>
 
+#include "errors.h"
 #include "scanner.h"
 
 using namespace std::filesystem;
 
-static void write_bytes(const path& path, std::size_t file_size)
-{
+static void write_bytes(const path& path, std::size_t file_size) {
     std::ofstream out(path, std::ios::binary);
     ASSERT_TRUE(out.good());
     std::string buffer(file_size, 'x');
@@ -17,8 +17,7 @@ static void write_bytes(const path& path, std::size_t file_size)
     out.close();
 }
 
-TEST(Scanner, CountsFilesDirsAndBytes)
-{
+TEST(Scanner, CountsFilesDirsAndBytes) {
     path root = temp_directory_path() / path("scanner_test_root");
     remove_all(root);
     create_directories(root / "a");
@@ -33,29 +32,28 @@ TEST(Scanner, CountsFilesDirsAndBytes)
     option.min_size_bytes = 0;
 
     auto result = core::scan_directory(root, option);
-
     remove_all(root);
 
-    EXPECT_EQ(result.file_count, 3u);
-    EXPECT_EQ(result.directory_count, 3u);
-    EXPECT_EQ(result.total_bytes, 22u);
+    auto& value = result.value();
+    EXPECT_EQ(value.file_count, 3u);
+    EXPECT_EQ(value.directory_count, 3u);
+    EXPECT_EQ(value.total_bytes, 22u);
 
-    ASSERT_TRUE(result.by_extension.contains(".txt"));
-    ASSERT_TRUE(result.by_extension.contains(".bin"));
-    ASSERT_TRUE(result.by_extension.contains(""));
+    ASSERT_TRUE(value.by_extension.contains(".txt"));
+    ASSERT_TRUE(value.by_extension.contains(".bin"));
+    ASSERT_TRUE(value.by_extension.contains(""));
 
-    EXPECT_EQ(result.by_extension[".txt"].count, 1u);
-    EXPECT_EQ(result.by_extension[".txt"].bytes, 10u);
+    EXPECT_EQ(value.by_extension[".txt"].count, 1u);
+    EXPECT_EQ(value.by_extension[".txt"].bytes, 10u);
 
-    EXPECT_EQ(result.by_extension[".bin"].count, 1u);
-    EXPECT_EQ(result.by_extension[".bin"].bytes, 7u);
+    EXPECT_EQ(value.by_extension[".bin"].count, 1u);
+    EXPECT_EQ(value.by_extension[".bin"].bytes, 7u);
 
-    EXPECT_EQ(result.by_extension[""].count, 1u);
-    EXPECT_EQ(result.by_extension[""].bytes, 5u);
+    EXPECT_EQ(value.by_extension[""].count, 1u);
+    EXPECT_EQ(value.by_extension[""].bytes, 5u);
 }
 
-TEST(Scanner, RespectsMinSize)
-{
+TEST(Scanner, RespectsMinSize) {
     path root = temp_directory_path() / path("scanner_test_minsize");
     remove_all(root);
     create_directories(root);
@@ -68,20 +66,28 @@ TEST(Scanner, RespectsMinSize)
     option.min_size_bytes = 5;
 
     auto result = core::scan_directory(root, option);
-
     remove_all(root);
 
-    EXPECT_EQ(result.file_count, 1u);
-    EXPECT_EQ(result.total_bytes, 10u);
-    EXPECT_EQ(result.by_extension[".txt"].count, 1u);
-    EXPECT_EQ(result.by_extension[".txt"].bytes, 10u);
+    auto& value = result.value();
+    EXPECT_EQ(value.file_count, 1u);
+    EXPECT_EQ(value.total_bytes, 10u);
+    EXPECT_EQ(value.by_extension[".txt"].count, 1u);
+    EXPECT_EQ(value.by_extension[".txt"].bytes, 10u);
 }
 
-TEST(Scanner, ThrowsIfRootMissing)
-{
+TEST(Scanner, ThrowsIfRootMissing) {
     core::ScanOptions option;
     path missing = temp_directory_path() / path("scanner_test_missing_12345");
+
+    auto result = core::scan_directory(missing, option);
     remove_all(missing);
 
-    EXPECT_THROW((void)core::scan_directory(missing, option), filesystem_error);
+    ASSERT_FALSE(result.has_value());
+
+    auto& value = result.error();
+    EXPECT_EQ(value.code, core::ScanErrorCode::NotFound);
+    EXPECT_EQ(value.message, "root does not exist");
+    EXPECT_EQ(value.path1, missing);
+    ASSERT_FALSE(value.path2.has_value());
+    EXPECT_EQ(value.system_error_code.value(), 2);
 }

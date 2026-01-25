@@ -12,6 +12,7 @@ class CliScannerConan(ConanFile):
         "spdlog/1.17.0",
         "cli11/2.6.0",
         "nlohmann_json/3.12.0",
+        "magic_enum/0.9.7"
     )
 
     generators = ("CMakeDeps", "CMakeToolchain")

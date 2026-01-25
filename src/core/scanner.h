@@ -1,8 +1,12 @@
 #pragma once
+
 #include <cstdint>
+#include <expected>
 #include <filesystem>
 #include <string>
 #include <unordered_map>
+
+#include "errors.h"
 
 namespace core {
     struct ScanOptions {
@@ -21,6 +25,7 @@ namespace core {
         std::uintmax_t total_bytes = 0;
         std::unordered_map<std::string, ExtensionStat> by_extension;
     };
-    
-    ScanResult scan_directory(const std::filesystem::path& root, const ScanOptions& option);
-}
+
+    std::expected<ScanResult, ScanError> scan_directory(
+        const std::filesystem::path& root, const ScanOptions& option);
+}  // namespace core
