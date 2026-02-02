@@ -21,8 +21,8 @@ namespace core {
         std::string message;
         std::optional<std::filesystem::path> path1, path2;
         std::error_code system_error_code;
-
-        std::string to_string();
-        nlohmann::json to_json();
+        
+        nlohmann::json to_json() const;
+        std::string to_string() const;
     };
 }  // namespace core

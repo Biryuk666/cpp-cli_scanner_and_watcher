@@ -1,5 +1,8 @@
 #include "scanner.h"
 
+#include <fmt/core.h>
+#include <fmt/format.h>
+
 namespace core {
     static bool is_hidden(const std::filesystem::path& path) {
 #ifdef _WIN32
@@ -69,6 +72,42 @@ namespace core {
             stats.count++;
             stats.bytes += size;
         }
+
+        return result;
+    }
+
+    nlohmann::json ScanResult::to_json() const {
+        nlohmann::json result;
+        result["path"] = root.string();
+        result["files"] = file_count;
+        result["directories"] = directory_count;
+        result["bytes"] = total_bytes;
+
+        for (const auto& [extention, stats] : by_extension) {
+            // clang-format off
+                result["by_extension"][extention] = {
+                    {"count", stats.count},
+                    {"bytes", stats.bytes}
+                };
+            // clang-format on
+        }
+
+        return result;
+    }
+
+    std::string ScanResult::to_string() const {
+        std::string result = fmt::format(
+            "root: {}; files: {}; directories: {}; bytes: {}; by_extension: [ ",
+            root.string(), file_count, directory_count, total_bytes);
+        for (const auto& [extension, stats] : by_extension) {
+            if (extension.empty()) {
+                result += fmt::format("none ");
+            } else {
+                result += fmt::format("count: {}; bytes: {}; ", stats.count,
+                                      stats.bytes);
+            }
+        }
+        result += fmt::format("]\n");
 
         return result;
     }

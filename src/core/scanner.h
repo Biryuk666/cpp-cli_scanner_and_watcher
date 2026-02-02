@@ -3,6 +3,8 @@
 #include <cstdint>
 #include <expected>
 #include <filesystem>
+#include <nlohmann/json.hpp>
+#include <filesystem>
 #include <string>
 #include <unordered_map>
 
@@ -20,10 +22,14 @@ namespace core {
     };
 
     struct ScanResult {
+        std::filesystem::path root;
         std::uint64_t file_count = 0;
         std::uint64_t directory_count = 0;
         std::uintmax_t total_bytes = 0;
         std::unordered_map<std::string, ExtensionStat> by_extension;
+
+        nlohmann::json to_json() const;
+        std::string to_string() const;
     };
 
     std::expected<ScanResult, ScanError> scan_directory(

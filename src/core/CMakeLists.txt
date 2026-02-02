@@ -1,3 +1,4 @@
+find_package(fmt CONFIG REQUIRED)
 find_package(magic_enum CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 
@@ -11,6 +12,7 @@ add_library(core STATIC
 
 target_include_directories(core PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(core PUBLIC
+  fmt::fmt
   magic_enum::magic_enum
   nlohmann_json::nlohmann_json)
 
