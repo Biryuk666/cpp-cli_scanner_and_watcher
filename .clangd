@@ -1,0 +1,6 @@
+CompileFlags:
+  CompilationDatabase: build/Debug
+  
+  Add:
+    - -Xclang
+    - -std=c++23
